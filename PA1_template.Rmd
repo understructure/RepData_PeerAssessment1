@@ -1,21 +1,102 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Untitled"
+author: "Maashu"
+date: "January 14, 2015"
+output: html_document
 ---
+
+
 
 
 ## Loading and preprocessing the data
 
+I always start by calling any libraries I know I'll need.
 
+```{r}
+rm(list=ls())
+library(ggplot2)
+library(data.table)
+```
+
+Next, I set the working directory and loaded the data.  I checked out 
+the head() of the data and do a summary() just to get a feel for it.
+```{r, echo=TRUE}
+
+# set working directory
+setwd("/Users/maashu/Documents/datsci/Coursera - Reproducible Research")
+
+#load raw file
+myData <- read.csv("activity.csv")
+head(myData)
+summary(myData)
+```
+
+Next, I inspected the data just to see what it looked like.
+When I discovered the NA values in the steps column of the
+dataframe, I decided to set those values to zero so the
+mean() function wouldn't return an NA value, and checked
+to see how many unique dates were in the file. This would
+serve as the denominator for getting the mean steps per 
+day.  I made the assumption that "mean" in this case was
+over all days in the dataset, not just days that had
+data.
+
+```{r, echo=TRUE}
+myCleanedData <- myData
+myCleanedData[is.na(myCleanedData$steps), "steps"] <- 0
+sum(myCleanedData$steps)
+numberOfDays <- length(unique(myCleanedData$date))
+```
+
+Next, I compared the number of steps in my cleaned dataset 
+to the number of steps in the original set just as a sanity check:
+
+```{r, mean_median_calc, echo=TRUE}
+sum(myData$steps, na.rm=TRUE)
+sum(myCleanedData$steps)
+myMean <- sum(myCleanedData$steps) / length(unique(myCleanedData$date))
+DT <- data.table(myCleanedData)
+setkey(DT, date)
+
+DT.median <- DT[,sum(steps),by=date]
+hist(DT.median$V1, breaks=10, main="Historgram of steps by day", xlab="Number of steps")
+
+myMedian <- median(DT.median$V1)
+myMedian <- as.character(myMedian)
+```
 
 ## What is mean total number of steps taken per day?
 
-
+The mean number of steps taken per day was `r myMean`, and the median number
+of steps taken per day was `r myMedian`.
 
 ## What is the average daily activity pattern?
 
+As you can see from teh plot below, it looks like this person is sleeping for the first 100
+five-minute increments or so (up to the 500 mark), and then slowly gets up and around, with
+a spike in activity between about increment 810 and 905.  Activity then has a few peaks
+and valleys for the rest of the day, and slows down considerably after about increment 2000.
+
+```{r, echo=TRUE}
+
+DT2 <- data.table(myCleanedData)
+setkey(DT2, interval)
+byInterval <- DT[,sum(steps),by=interval]
+
+steps.ts <- byInterval$V1 / numberOfDays
+steps.ts <- cbind(byInterval$interval, steps.ts)
+plot(steps.ts, type="l", xlab="Five-minute increment", ylab="Average steps")
+colnames(steps.ts) <- c("increment", "steps")
+
+byInterval <- data.frame(byInterval)
+maxInterval <- byInterval[byInterval$V1 == max(byInterval$V1),"interval"]
+maxSteps <- byInterval[byInterval$V1 == max(byInterval$V1),2]
+avgMaxSteps <- maxSteps / numberOfDays
+maxSteps <- as.character(maxSteps)
+```
+The five-minute interval that contains the most steps averaged across all days is
+interval `r maxInterval`, where this person logged a total of `r maxSteps` over the
+time period, an average of `r avgMaxSteps` per day.
 
 
 ## Imputing missing values
