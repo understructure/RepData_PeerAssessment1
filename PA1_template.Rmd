@@ -156,12 +156,30 @@ inflates the number of steps taken on average and by median.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+Yes.  As the following time series plots show, while the activity is fairly similar
+for about the first 1000 time increments, from about 900 - 2000 there is a marked
+increase in activity on the weekends.  The time periods of greatest activity appear
+to be similar between weekdays and weekends, but on average, this person moves
+much more on the weekends than on the weekdays.
 ```{r}
 myDataImputed$dow <- weekdays(as.Date(myDataImputed$date))
 
 myDataImputed$dow <- as.factor(revalue(myDataImputed$dow, c("Saturday"="weekend", "Sunday"="weekend", "Monday"="weekday", "Tuesday"="weekday", "Wednesday"="weekday"
 ,"Thursday"="weekday", "Friday"="weekday")))
 
+par(mfrow=c(2,1))
+
+
+DT3 <- data.table(myDataImputed)
+setkey(DT3, interval)
+byInterval3 <- DT3[,sum(steps),by=c("interval","dow")]
+
+steps.ts3.weekday <- byInterval3[byInterval3$dow == "weekday",V1] / numberOfDays
+steps.ts3.weekend <- byInterval3[byInterval3$dow == "weekend",V1] / numberOfDays
+steps.ts3.weekday <- cbind(byInterval$interval, steps.ts3.weekday)
+steps.ts3.weekend <- cbind(byInterval$interval, steps.ts3.weekend)
+plot(steps.ts3.weekday, type="l", xlab="Five-minute increment", ylab="Average steps (weekday)")
+plot(steps.ts3.weekend, type="l", xlab="Five-minute increment", ylab="Average steps (weekend)")
 
 ```
 
