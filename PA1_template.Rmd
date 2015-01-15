@@ -16,6 +16,7 @@ I always start by calling any libraries I know I'll need.
 rm(list=ls())
 library(ggplot2)
 library(data.table)
+library(plyr)
 ```
 
 Next, I set the working directory and loaded the data.  I checked out 
@@ -45,7 +46,7 @@ data.
 myCleanedData <- myData
 myCleanedData[is.na(myCleanedData$steps), "steps"] <- 0
 sum(myCleanedData$steps)
-numberOfDays <- length(unique(myCleanedData$date))
+numberOfDays <- length(unique(myData$date))
 ```
 
 Next, I compared the number of steps in my cleaned dataset 
@@ -54,7 +55,7 @@ to the number of steps in the original set just as a sanity check:
 ```{r, mean_median_calc, echo=TRUE}
 sum(myData$steps, na.rm=TRUE)
 sum(myCleanedData$steps)
-myMean <- sum(myCleanedData$steps) / length(unique(myCleanedData$date))
+myMean <- sum(myCleanedData$steps) / numberOfDays
 DT <- data.table(myCleanedData)
 setkey(DT, date)
 
@@ -101,6 +102,66 @@ time period, an average of `r avgMaxSteps` per day.
 
 ## Imputing missing values
 
+For this, we'll go back to the original dataset.  If you sum() over a vector of TRUE/FALSE
+values, you'll get the total number of values that are TRUE:
+```{r}
+naRowcount <- sum(is.na(myData$steps))
+```
+The total number of rows with NA values is `r naRowcount`
 
+My strategy for setting NA values to something per the assignment is to assign the mean
+by that time interval.  We've already got the total values by interval in the byInterval
+data.frame.  The new dataset I created for this purpose is called myDataImputed.
+
+```{r}
+myDataImputed <- myData
+
+colnames(byInterval) <- c("interval", "steps")
+byInterval$avgSteps <- byInterval$steps / numberOfDays
+myDataImputed[is.na(myDataImputed$steps),]
+myDataImputed$newSteps <- -1
+for (i in 1:nrow(myDataImputed)) {
+  if(is.na(myDataImputed[i,"steps"])) {
+    #avgStepsByInterval <- byInterval[byInterval$interval == myData[i,"interval"],"avgSteps"]
+    #myData$newSteps <- avgStepsByInterval
+    myDataImputed[i,"newSteps"] <- byInterval[byInterval$interval == myDataImputed[i,"interval"],"avgSteps"]
+
+   }
+}
+myDataImputed[is.na(myDataImputed$steps),"steps"] <- myDataImputed[is.na(myDataImputed$steps),"newSteps"]
+
+myDataNew <- myDataImputed[,c("steps","date","interval")]
+```
+Now for the histogram of total steps per day, mean and median number of steps per day (I assumed
+this was to be performed on the imputed dataset):
+
+```{r}
+DT.imputed <- data.table(myDataImputed)
+setkey(DT.imputed, date)
+
+DT.imputed.median <- DT.imputed[,sum(steps),by=date]
+hist(DT.imputed.median$V1, breaks=10, main="Historgram of steps by day (including imputed values)", xlab="Number of steps")
+
+myMedian.imputed <- median(DT.imputed.median$V1)
+myMedian.imputed <- as.character(myMedian)
+myMean.imputed <- sum(myDataImputed$steps) / numberOfDays
+myMean.imputed <- as.character(myMean.imputed)
+```
+For the imputed data, the median number of steps per day is `r myMedian.imputed` and the
+mean number of steps per day is `r myMean.imputed`.
+
+These values differ from the estimates from the first part of the assignment by a fair amount - the
+impact of imputing missing data on the estimates of the total daily number of steps is that it
+inflates the number of steps taken on average and by median.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+myDataImputed$dow <- weekdays(as.Date(myDataImputed$date))
+
+myDataImputed$dow <- as.factor(revalue(myDataImputed$dow, c("Saturday"="weekend", "Sunday"="weekend", "Monday"="weekday", "Tuesday"="weekday", "Wednesday"="weekday"
+,"Thursday"="weekday", "Friday"="weekday")))
+
+
+```
+
