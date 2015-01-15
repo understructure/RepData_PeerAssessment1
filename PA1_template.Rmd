@@ -118,7 +118,7 @@ myDataImputed <- myData
 
 colnames(byInterval) <- c("interval", "steps")
 byInterval$avgSteps <- byInterval$steps / numberOfDays
-myDataImputed[is.na(myDataImputed$steps),]
+#myDataImputed[is.na(myDataImputed$steps),]
 myDataImputed$newSteps <- -1
 for (i in 1:nrow(myDataImputed)) {
   if(is.na(myDataImputed[i,"steps"])) {
